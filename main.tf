@@ -301,3 +301,7 @@ output "instance_password" {
   value     = random_password.password.result
   sensitive = true
 }
+
+output "rdp_command" {
+  value = "mstsc /v:${local.instance_ip}  (User: Administrator, Password: terraform output -raw instance_password)"
+}
