@@ -6,7 +6,7 @@ variable "region" {
 variable "resource_name" {
   description = "Name with which to prefix resources in AWS"
   type        = string
-  default     = "cloud-gaming"
+  default     = "cloudrig"
 }
 
 variable "allowed_availability_zone_identifier" {
@@ -25,6 +25,12 @@ variable "root_block_device_size_gb" {
   description = "The size of the root block device (C:\\ drive) attached to the instance"
   type        = number
   default     = 120
+}
+
+variable "games_volume_size_gb" {
+  description = "The size of the persistent games volume (D:\\ drive). This volume survives instance destruction."
+  type        = number
+  default     = 200
 }
 
 variable "custom_ami" {
@@ -75,8 +81,8 @@ variable "install_uplay" {
   default     = false
 }
 
-variable "install_origin" {
-  description = "Download and install EA Origin on first boot"
+variable "install_ea_app" {
+  description = "Download and install EA App on first boot"
   type        = bool
   default     = false
 }

@@ -22,7 +22,7 @@ function install-parsec-cloud-preparation-tool {
     $scriptEntrypoint = Join-Path $repoPath "PostInstall\PostInstall.ps1"
 
     if (!(Test-Path -Path $extractPath)) {
-        [Net.ServicePointManager]::SecurityProtocol = "tls12, tls11, tls"
+        [Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12
         (New-Object System.Net.WebClient).DownloadFile("https://github.com/jamesstringerparsec/Parsec-Cloud-Preparation-Tool/archive/master.zip", $downloadPath)
         New-Item -Path $extractPath -ItemType Directory
         Expand-Archive $downloadPath -DestinationPath $extractPath
@@ -69,12 +69,12 @@ function install-graphic-driver {
         $KeyPrefix = "latest"
 
         # download driver
-        $Objects = Get-S3Object -BucketName $Bucket -KeyPrefix $KeyPrefix -Region us-east-1
+        $Objects = Get-S3Object -BucketName $Bucket -KeyPrefix $KeyPrefix -Region ${region}
         foreach ($Object in $Objects) {
             $LocalFileName = $Object.Key
             if ($LocalFileName -ne '' -and $Object.Size -ne 0) {
                 $LocalFilePath = Join-Path $ExtractionPath $LocalFileName
-                Copy-S3Object -BucketName $Bucket -Key $Object.Key -LocalFile $LocalFilePath -Region us-east-1
+                Copy-S3Object -BucketName $Bucket -Key $Object.Key -LocalFile $LocalFilePath -Region ${region}
             }
         }
 
@@ -82,25 +82,25 @@ function install-graphic-driver {
         New-ItemProperty -Path "HKLM:\SOFTWARE\NVIDIA Corporation\Global\GridLicensing" -Name "NvCplDisableManageLicensePage" -PropertyType "DWord" -Value "1"
 
         %{ else }
-        %{ if regex("^g[0-9]+", var.instance_type) == "g4" }
+        %{ if regex("^g[0-9]+", var.instance_type) == "g4" || regex("^g[0-9]+", var.instance_type) == "g5" }
 
-        # vGaming driver for g4
+        # vGaming driver for g4/g5
         $Bucket = "nvidia-gaming"
         $KeyPrefix = "windows/latest"
 
         # download and extract driver
-        $Objects = Get-S3Object -BucketName $Bucket -KeyPrefix $KeyPrefix -Region us-east-1
+        $Objects = Get-S3Object -BucketName $Bucket -KeyPrefix $KeyPrefix -Region ${region}
         foreach ($Object in $Objects) {
             if ($Object.Size -ne 0) {
                 $LocalFileName = "C:\nvidia-driver\driver.zip"
-                Copy-S3Object -BucketName $Bucket -Key $Object.Key -LocalFile $LocalFileName -Region us-east-1
+                Copy-S3Object -BucketName $Bucket -Key $Object.Key -LocalFile $LocalFileName -Region ${region}
                 Expand-Archive $LocalFileName -DestinationPath $ExtractionPath
                 break
             }
         }
 
         # install licence
-        Copy-S3Object -BucketName $Bucket -Key "GridSwCert-Archive/GridSwCert-Windows_2020_04.cert" -LocalFile "C:\Users\Public\Documents\GridSwCert.txt" -Region us-east-1
+        Copy-S3Object -BucketName $Bucket -Key "GridSwCert-Archive/GridSwCert-Windows_2024_10.cert" -LocalFile "C:\Users\Public\Documents\GridSwCert.txt" -Region ${region}
         [microsoft.win32.registry]::SetValue("HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global", "vGamingMarketplace", 0x02)
 
         %{ endif }
@@ -126,9 +126,46 @@ function install-graphic-driver {
     }
 }
 
+function mount-games-volume {
+    # Wait for the games volume to be attached
+    $driveLetter = "${games_volume_drive}"
+    $maxRetries = 30
+    $retryCount = 0
+
+    # Find the secondary disk (not the root volume)
+    $disk = $null
+    while ($retryCount -lt $maxRetries) {
+        $disk = Get-Disk | Where-Object { $_.Number -ne 0 -and $_.Number -ne $null } | Select-Object -First 1
+        if ($disk) { break }
+        Start-Sleep -Seconds 10
+        $retryCount++
+    }
+
+    if (-not $disk) {
+        Write-Output "Games volume not found after waiting"
+        return
+    }
+
+    # Initialize and format if the disk is raw (first use)
+    if ($disk.PartitionStyle -eq "RAW") {
+        Initialize-Disk -Number $disk.Number -PartitionStyle GPT
+        $partition = New-Partition -DiskNumber $disk.Number -UseMaximumSize -DriveLetter $driveLetter
+        Format-Volume -DriveLetter $driveLetter -FileSystem NTFS -NewFileSystemLabel "Games" -Confirm:$false
+    }
+    else {
+        # Disk already formatted — just assign drive letter
+        $partition = Get-Partition -DiskNumber $disk.Number | Where-Object { $_.Type -ne "Reserved" -and $_.Type -ne "System" } | Select-Object -First 1
+        if ($partition -and -not $partition.DriveLetter) {
+            Set-Partition -DiskNumber $disk.Number -PartitionNumber $partition.PartitionNumber -NewDriveLetter $driveLetter
+        }
+    }
+}
+
 install-chocolatey
 Install-PackageProvider -Name NuGet -Force
 choco install awstools.powershell
+
+mount-games-volume
 
 %{ if var.install_parsec }
 install-parsec-cloud-preparation-tool
@@ -156,8 +193,8 @@ choco install goggalaxy
 choco install uplay
 %{ endif }
 
-%{ if var.install_origin }
-choco install origin
+%{ if var.install_ea_app }
+choco install ea-app
 %{ endif }
 
 %{ if var.install_epic_games_launcher }

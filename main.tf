@@ -8,7 +8,7 @@ data "aws_ami" "windows_ami" {
 
   filter {
     name   = "name"
-    values = ["Windows_Server-2019-English-Full-Base-*"]
+    values = ["Windows_Server-2022-English-Full-Base-*"]
   }
 }
 
@@ -33,6 +33,20 @@ locals {
     },
     "vnc" : {
       "tcp" : [{ "port" = 5900, "description" = "VNC", }, ],
+    },
+    "steam_link" : {
+      "tcp" : [
+        { "port" = 27036, "description" = "Steam Link Discovery/Control", },
+        { "port" = 27037, "description" = "Steam Link Streaming", },
+      ],
+      "udp" : [
+        { "port" = 27031, "description" = "Steam Link Discovery", },
+        { "port" = 27032, "description" = "Steam Link Discovery", },
+        { "port" = 27033, "description" = "Steam Link Discovery", },
+        { "port" = 27034, "description" = "Steam Link Discovery", },
+        { "port" = 27035, "description" = "Steam Link Discovery", },
+        { "port" = 27036, "description" = "Steam Link Discovery", },
+      ],
     },
     "sunshine" : {
       "tcp" : [
@@ -67,7 +81,7 @@ resource "aws_ssm_parameter" "password" {
   value = random_password.password.result
 
   tags = {
-    App = "aws-cloud-gaming"
+    App = "cloudrig"
   }
 }
 
@@ -75,7 +89,7 @@ resource "aws_security_group" "default" {
   name = "${var.resource_name}-sg"
 
   tags = {
-    App = "aws-cloud-gaming"
+    App = "cloudrig"
   }
 }
 
@@ -136,7 +150,7 @@ resource "aws_iam_role" "windows_instance_role" {
 EOF
 
   tags = {
-    App = "aws-cloud-gaming"
+    App = "cloudrig"
   }
 }
 
@@ -175,6 +189,21 @@ resource "aws_iam_instance_profile" "windows_instance_profile" {
   role = aws_iam_role.windows_instance_role.name
 }
 
+resource "aws_ebs_volume" "games" {
+  availability_zone = local.availability_zone
+  size              = var.games_volume_size_gb
+  type              = "gp3"
+
+  tags = {
+    Name = "${var.resource_name}-games"
+    App  = "aws-cloud-gaming"
+  }
+
+  lifecycle {
+    prevent_destroy = true
+  }
+}
+
 resource "aws_spot_instance_request" "windows_instance" {
   instance_type     = var.instance_type
   availability_zone = local.availability_zone
@@ -184,6 +213,8 @@ resource "aws_spot_instance_request" "windows_instance" {
     "${path.module}/templates/user_data.tpl",
     {
       password_ssm_parameter = aws_ssm_parameter.password.name,
+      region                 = var.region,
+      games_volume_drive     = "D",
       var = {
         instance_type               = var.instance_type,
         install_parsec              = var.install_parsec,
@@ -191,7 +222,7 @@ resource "aws_spot_instance_request" "windows_instance" {
         install_graphic_card_driver = var.install_graphic_card_driver,
         install_steam               = var.install_steam,
         install_gog_galaxy          = var.install_gog_galaxy,
-        install_origin              = var.install_origin,
+        install_ea_app              = var.install_ea_app,
         install_epic_games_launcher = var.install_epic_games_launcher,
         install_uplay               = var.install_uplay,
       }
@@ -213,6 +244,12 @@ resource "aws_spot_instance_request" "windows_instance" {
     Name = "${var.resource_name}-instance"
     App  = "aws-cloud-gaming"
   }
+}
+
+resource "aws_volume_attachment" "games" {
+  device_name = "/dev/xvdf"
+  volume_id   = aws_ebs_volume.games.id
+  instance_id = aws_spot_instance_request.windows_instance.spot_instance_id
 }
 
 output "instance_id" {
