@@ -93,6 +93,12 @@ variable "install_epic_games_launcher" {
   default     = false
 }
 
+variable "use_spot_instance" {
+  description = "Use a spot instance for cost savings. Set to false to use an on-demand instance instead."
+  type        = bool
+  default     = true
+}
+
 variable "idle_shutdown_timeout_minutes" {
   description = "Shut down the instance after this many minutes of GPU idle (no gaming). Set to 0 to disable."
   type        = number

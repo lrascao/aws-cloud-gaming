@@ -204,11 +204,7 @@ resource "aws_ebs_volume" "games" {
   }
 }
 
-resource "aws_spot_instance_request" "windows_instance" {
-  instance_type     = var.instance_type
-  availability_zone = local.availability_zone
-  ami               = (length(var.custom_ami) > 0) ? var.custom_ami : data.aws_ami.windows_ami.image_id
-  security_groups   = [aws_security_group.default.name]
+locals {
   user_data = var.skip_install ? "" : templatefile(
     "${path.module}/templates/user_data.tpl",
     {
@@ -229,6 +225,20 @@ resource "aws_spot_instance_request" "windows_instance" {
       }
     }
   )
+
+  instance_id = var.use_spot_instance ? aws_spot_instance_request.windows_instance[0].spot_instance_id : aws_instance.windows_instance[0].id
+  instance_ip = var.use_spot_instance ? aws_spot_instance_request.windows_instance[0].public_ip : aws_instance.windows_instance[0].public_ip
+  instance_public_dns = var.use_spot_instance ? aws_spot_instance_request.windows_instance[0].public_dns : aws_instance.windows_instance[0].public_dns
+}
+
+resource "aws_spot_instance_request" "windows_instance" {
+  count = var.use_spot_instance ? 1 : 0
+
+  instance_type        = var.instance_type
+  availability_zone    = local.availability_zone
+  ami                  = (length(var.custom_ami) > 0) ? var.custom_ami : data.aws_ami.windows_ami.image_id
+  security_groups      = [aws_security_group.default.name]
+  user_data            = local.user_data
   iam_instance_profile = aws_iam_instance_profile.windows_instance_profile.id
 
   # Spot configuration
@@ -243,26 +253,48 @@ resource "aws_spot_instance_request" "windows_instance" {
 
   tags = {
     Name = "${var.resource_name}-instance"
-    App  = "aws-cloud-gaming"
+    App  = "cloudrig"
+  }
+}
+
+resource "aws_instance" "windows_instance" {
+  count = var.use_spot_instance ? 0 : 1
+
+  instance_type        = var.instance_type
+  availability_zone    = local.availability_zone
+  ami                  = (length(var.custom_ami) > 0) ? var.custom_ami : data.aws_ami.windows_ami.image_id
+  security_groups      = [aws_security_group.default.name]
+  user_data            = local.user_data
+  iam_instance_profile = aws_iam_instance_profile.windows_instance_profile.id
+
+  # EBS configuration
+  ebs_optimized = true
+  root_block_device {
+    volume_size = var.root_block_device_size_gb
+  }
+
+  tags = {
+    Name = "${var.resource_name}-instance"
+    App  = "cloudrig"
   }
 }
 
 resource "aws_volume_attachment" "games" {
   device_name = "/dev/xvdf"
   volume_id   = aws_ebs_volume.games.id
-  instance_id = aws_spot_instance_request.windows_instance.spot_instance_id
+  instance_id = local.instance_id
 }
 
 output "instance_id" {
-  value = aws_spot_instance_request.windows_instance.spot_instance_id
+  value = local.instance_id
 }
 
 output "instance_ip" {
-  value = aws_spot_instance_request.windows_instance.public_ip
+  value = local.instance_ip
 }
 
 output "instance_public_dns" {
-  value = aws_spot_instance_request.windows_instance.public_dns
+  value = local.instance_public_dns
 }
 
 output "instance_password" {
