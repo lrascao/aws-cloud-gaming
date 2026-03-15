@@ -245,8 +245,8 @@ locals {
   )
 
   instance_id         = try(aws_spot_instance_request.windows_instance[0].spot_instance_id, aws_instance.windows_instance[0].id, "")
-  instance_ip         = try(aws_spot_instance_request.windows_instance[0].public_ip, aws_instance.windows_instance[0].public_ip, "")
-  instance_public_dns = try(aws_spot_instance_request.windows_instance[0].public_dns, aws_instance.windows_instance[0].public_dns, "")
+  instance_ip         = try(aws_eip.instance.public_ip, "")
+  instance_public_dns = try(aws_eip.instance.public_dns, "")
 }
 
 resource "aws_spot_instance_request" "windows_instance" {
@@ -295,6 +295,20 @@ resource "aws_instance" "windows_instance" {
     Name = "${var.resource_name}-instance"
     App  = "cloudrig"
   }
+}
+
+resource "aws_eip" "instance" {
+  domain = "vpc"
+
+  tags = {
+    Name = "${var.resource_name}-eip"
+    App  = "cloudrig"
+  }
+}
+
+resource "aws_eip_association" "instance" {
+  allocation_id = aws_eip.instance.id
+  instance_id   = local.instance_id
 }
 
 resource "aws_volume_attachment" "games" {

@@ -47,7 +47,13 @@ jobs:
           EOF
 
       - name: Terraform Apply
-        run: terraform apply -auto-approve
+        run: |
+          terraform apply -auto-approve \
+            -target=aws_spot_instance_request.windows_instance \
+            -target=aws_instance.windows_instance \
+            -target=aws_ebs_volume.games \
+            -target=aws_volume_attachment.games \
+            -target=aws_eip_association.instance
 
       - name: Show connection info
         run: |

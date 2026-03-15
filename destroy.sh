@@ -39,6 +39,7 @@ fi
 # Everything else (security group, IAM, SSM) is free/cheap
 # and keeping it makes the next apply faster with the same password.
 terraform destroy \
+  -target=aws_eip_association.instance \
   -target=aws_volume_attachment.games \
   -target=aws_ebs_volume.games \
   -target=aws_spot_instance_request.windows_instance \
