@@ -161,6 +161,56 @@ function mount-games-volume {
     }
 }
 
+function install-idle-shutdown {
+    $scriptDir = "C:\cloudrig"
+    $scriptPath = Join-Path $scriptDir "idle-shutdown.ps1"
+    $counterPath = Join-Path $scriptDir "idle-counter.txt"
+
+    New-Item -Path $scriptDir -ItemType Directory -Force
+
+    # Write the idle monitor script
+    @'
+$counterPath = "C:\cloudrig\idle-counter.txt"
+$timeoutMinutes = ${idle_shutdown_timeout_minutes}
+$checkIntervalMinutes = 5
+$gpuIdleThreshold = 10
+
+# Query GPU utilization via nvidia-smi
+try {
+    $gpuUtil = & "C:\Program Files\NVIDIA Corporation\NVSMI\nvidia-smi.exe" --query-gpu=utilization.gpu --format=csv,noheader,nounits 2>$null
+    $gpuPercent = [int]($gpuUtil.Trim())
+} catch {
+    # nvidia-smi not available yet (driver not installed), skip this check
+    exit 0
+}
+
+# Read current idle counter
+if (Test-Path $counterPath) {
+    $counter = [int](Get-Content $counterPath)
+} else {
+    $counter = 0
+}
+
+if ($gpuPercent -lt $gpuIdleThreshold) {
+    $counter++
+} else {
+    $counter = 0
+}
+
+Set-Content -Path $counterPath -Value $counter
+
+$idleMinutes = $counter * $checkIntervalMinutes
+if ($idleMinutes -ge $timeoutMinutes) {
+    Stop-Computer -Force
+}
+'@ | Set-Content -Path $scriptPath -Encoding UTF8
+
+    # Register scheduled task to run every 5 minutes
+    $action = New-ScheduledTaskAction -Execute powershell.exe -Argument "-WindowStyle Hidden -ExecutionPolicy Bypass -File `"$scriptPath`""
+    $trigger = New-ScheduledTaskTrigger -Once -At (Get-Date) -RepetitionInterval (New-TimeSpan -Minutes 5)
+    Register-ScheduledTask -TaskName "cloudrig-idle-shutdown" -Action $action -Trigger $trigger -RunLevel Highest -Description "Shuts down instance after ${idle_shutdown_timeout_minutes} minutes of GPU idle"
+}
+
 install-chocolatey
 Install-PackageProvider -Name NuGet -Force
 choco install awstools.powershell
@@ -199,6 +249,10 @@ choco install ea-app
 
 %{ if var.install_epic_games_launcher }
 choco install epicgameslauncher
+%{ endif }
+
+%{ if idle_shutdown_timeout_minutes > 0 }
+install-idle-shutdown
 %{ endif }
 
 </powershell>

@@ -212,9 +212,10 @@ resource "aws_spot_instance_request" "windows_instance" {
   user_data = var.skip_install ? "" : templatefile(
     "${path.module}/templates/user_data.tpl",
     {
-      password_ssm_parameter = aws_ssm_parameter.password.name,
-      region                 = var.region,
-      games_volume_drive     = "D",
+      password_ssm_parameter        = aws_ssm_parameter.password.name,
+      region                        = var.region,
+      games_volume_drive            = "D",
+      idle_shutdown_timeout_minutes = var.idle_shutdown_timeout_minutes,
       var = {
         instance_type               = var.instance_type,
         install_parsec              = var.install_parsec,

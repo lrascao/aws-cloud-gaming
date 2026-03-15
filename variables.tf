@@ -92,3 +92,9 @@ variable "install_epic_games_launcher" {
   type        = bool
   default     = false
 }
+
+variable "idle_shutdown_timeout_minutes" {
+  description = "Shut down the instance after this many minutes of GPU idle (no gaming). Set to 0 to disable."
+  type        = number
+  default     = 30
+}

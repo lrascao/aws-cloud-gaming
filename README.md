@@ -16,6 +16,7 @@ Currently compatible with g3, g4, and g5 instance families. The script will stil
 * Use a spot instance for around 50% to 70% cost saving compared to an on-demand instance.
 * Use the latest Windows Server 2022 AMI available in the region by default, and allow the use of a custom AMI after the initial setup.
 * Persistent games volume (D:\ drive) that survives instance destruction. Games only need to be installed once.
+* Auto-shutdown after 30 minutes of GPU idle (configurable). Prevents forgotten instances from burning money while never interrupting an active gaming session.
 
 ### Instance provisioning
 * Automatically download of the [Parsec-Cloud-Preparation-Tool](https://github.com/jamesstringerparsec/Parsec-Cloud-Preparation-Tool) by [@jamesstringerparsec](https://github.com/jamesstringerparsec) and run it on first login.
@@ -107,6 +108,7 @@ resource "aws_volume_attachment" "game_volume_attachment" {
 | install_uplay | Download and install Ubisoft Uplay on first boot | `bool` | false |
 | install_ea_app | Download and install EA App on first boot | `bool` | false |
 | install_epic_games_launcher | Download and install EPIC Games Launcher on first boot | `bool` | false |
+| idle_shutdown_timeout_minutes | Shut down instance after this many minutes of GPU idle. Set to 0 to disable. | `number` | 30 |
 
 
 ## Outputs
