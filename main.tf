@@ -189,18 +189,36 @@ resource "aws_iam_instance_profile" "windows_instance_profile" {
   role = aws_iam_role.windows_instance_role.name
 }
 
+data "aws_ebs_snapshot_ids" "games" {
+  filter {
+    name   = "tag:Name"
+    values = ["${var.resource_name}-games-snapshot"]
+  }
+  filter {
+    name   = "status"
+    values = ["completed"]
+  }
+}
+
+data "aws_ebs_snapshot" "games" {
+  count       = length(data.aws_ebs_snapshot_ids.games.ids) > 0 ? 1 : 0
+  most_recent = true
+
+  filter {
+    name   = "tag:Name"
+    values = ["${var.resource_name}-games-snapshot"]
+  }
+}
+
 resource "aws_ebs_volume" "games" {
   availability_zone = local.availability_zone
   size              = var.games_volume_size_gb
   type              = "gp3"
+  snapshot_id       = length(data.aws_ebs_snapshot.games) > 0 ? data.aws_ebs_snapshot.games[0].id : null
 
   tags = {
     Name = "${var.resource_name}-games"
-    App  = "aws-cloud-gaming"
-  }
-
-  lifecycle {
-    prevent_destroy = true
+    App  = "cloudrig"
   }
 }
 
@@ -300,6 +318,10 @@ output "instance_public_dns" {
 output "instance_password" {
   value     = random_password.password.result
   sensitive = true
+}
+
+output "games_volume_id" {
+  value = aws_ebs_volume.games.id
 }
 
 output "rdp_command" {

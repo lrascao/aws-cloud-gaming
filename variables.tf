@@ -28,9 +28,9 @@ variable "root_block_device_size_gb" {
 }
 
 variable "games_volume_size_gb" {
-  description = "The size of the persistent games volume (D:\\ drive). This volume survives instance destruction."
+  description = "The size of the games volume (D:\\ drive). Snapshotted on destroy and restored on next apply."
   type        = number
-  default     = 200
+  default     = 100
 }
 
 variable "custom_ami" {

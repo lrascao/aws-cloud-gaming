@@ -15,7 +15,7 @@ Currently compatible with g3, g4, and g5 instance families. The script will stil
 * Restrictive security group. Allow ingress to RDP (port 3389) and VNC (port 5900) only from the computer that created the instance.
 * Use a spot instance for around 50% to 70% cost saving compared to an on-demand instance.
 * Use the latest Windows Server 2022 AMI available in the region by default, and allow the use of a custom AMI after the initial setup.
-* Persistent games volume (D:\ drive) that survives instance destruction. Games only need to be installed once.
+* Games volume (D:\ drive) is snapshotted on destroy and restored on next apply. You only pay for snapshot storage (~$0.05/GB/month for used data) between sessions instead of a live EBS volume.
 * Auto-shutdown after 30 minutes of GPU idle (configurable). Prevents forgotten instances from burning money while never interrupting an active gaming session.
 
 ### Instance provisioning
@@ -97,7 +97,7 @@ resource "aws_volume_attachment" "game_volume_attachment" {
 | instance_type | The aws instance type, Choose one with a CPU/GPU that fits your need: https://aws.amazon.com/ec2/instance-types/#Accelerated_Computing | `string` | "g4dn.xlarge" |
 | resource_name | Name with which to prefix resources in AWS | `string` | `cloudrig` |
 | root_block_device_size_gb | The size of the root block device (C:\\ drive) attached to the instance | `number` | 120 |
-| games_volume_size_gb | The size of the persistent games volume (D:\\ drive). Survives instance destruction. | `number` | 200 |
+| games_volume_size_gb | The size of the games volume (D:\\ drive). Snapshotted on destroy and restored on next apply. | `number` | 100 |
 | custom_ami | Use the specified ami instead of the most recent windows ami in available in the region | `string` | "" |
 | skip_install | Skip installation step on startup. Useful when using a custom AMI that is already setup | `bool` | false |
 | install_parsec | Download and run Parsec-Cloud-Preparation-Tool on first login | `bool` | true |
@@ -118,3 +118,5 @@ resource "aws_volume_attachment" "game_volume_attachment" {
 | instance_ip | The ip address of the instance. Use it to connect | `string` |
 | instance_public_dns | The dns address of the instance. Use it to connect | `string` |
 | instance_password | The Administrator password of the instance. Use it to connect | `string` |
+| games_volume_id | The id of the games EBS volume | `string` |
+| rdp_command | RDP connection command and credentials hint | `string` |
