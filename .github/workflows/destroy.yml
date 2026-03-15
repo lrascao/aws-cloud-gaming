@@ -1,0 +1,50 @@
+name: "Stop Cloudrig"
+
+on:
+  workflow_dispatch:
+
+permissions:
+  id-token: write
+  contents: read
+
+env:
+  TF_VAR_region: ${{ vars.TF_VAR_REGION }}
+  TF_VAR_games_volume_size_gb: ${{ vars.TF_VAR_GAMES_VOLUME_SIZE_GB }}
+  RESOURCE_NAME: ${{ vars.RESOURCE_NAME || 'cloudrig' }}
+
+jobs:
+  destroy:
+    name: Destroy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.TF_VAR_REGION }}
+
+      - uses: hashicorp/setup-terraform@v3
+
+      - name: Terraform Init
+        run: |
+          terraform init \
+            -backend-config="bucket=${RESOURCE_NAME}-terraform-state" \
+            -backend-config="region=${TF_VAR_region}" \
+            -backend-config="dynamodb_table=${RESOURCE_NAME}-terraform-locks"
+
+      - name: Generate tfvars
+        run: |
+          cat > terraform.tfvars <<EOF
+          region = "${TF_VAR_region}"
+          resource_name = "${RESOURCE_NAME}"
+          games_volume_size_gb = ${TF_VAR_games_volume_size_gb:-100}
+          EOF
+
+      - name: Snapshot and Destroy
+        run: ./destroy.sh -auto-approve
+
+      - name: Summary
+        run: |
+          echo "## Cloudrig stopped" >> $GITHUB_STEP_SUMMARY
+          echo "Games volume has been snapshotted and instance destroyed." >> $GITHUB_STEP_SUMMARY
