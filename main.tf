@@ -244,9 +244,9 @@ locals {
     }
   )
 
-  instance_id = var.use_spot_instance ? aws_spot_instance_request.windows_instance[0].spot_instance_id : aws_instance.windows_instance[0].id
-  instance_ip = var.use_spot_instance ? aws_spot_instance_request.windows_instance[0].public_ip : aws_instance.windows_instance[0].public_ip
-  instance_public_dns = var.use_spot_instance ? aws_spot_instance_request.windows_instance[0].public_dns : aws_instance.windows_instance[0].public_dns
+  instance_id         = try(aws_spot_instance_request.windows_instance[0].spot_instance_id, aws_instance.windows_instance[0].id, "")
+  instance_ip         = try(aws_spot_instance_request.windows_instance[0].public_ip, aws_instance.windows_instance[0].public_ip, "")
+  instance_public_dns = try(aws_spot_instance_request.windows_instance[0].public_dns, aws_instance.windows_instance[0].public_dns, "")
 }
 
 resource "aws_spot_instance_request" "windows_instance" {
