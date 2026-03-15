@@ -67,14 +67,15 @@ function install-graphic-driver {
         # GRID driver for g3
         $Bucket = "ec2-windows-nvidia-drivers"
         $KeyPrefix = "latest"
+        $BucketRegion = "us-east-1"
 
         # download driver
-        $Objects = Get-S3Object -BucketName $Bucket -KeyPrefix $KeyPrefix -Region ${region}
+        $Objects = Get-S3Object -BucketName $Bucket -KeyPrefix $KeyPrefix -Region $BucketRegion
         foreach ($Object in $Objects) {
             $LocalFileName = $Object.Key
             if ($LocalFileName -ne '' -and $Object.Size -ne 0) {
                 $LocalFilePath = Join-Path $ExtractionPath $LocalFileName
-                Copy-S3Object -BucketName $Bucket -Key $Object.Key -LocalFile $LocalFilePath -Region ${region}
+                Copy-S3Object -BucketName $Bucket -Key $Object.Key -LocalFile $LocalFilePath -Region $BucketRegion
             }
         }
 
@@ -87,20 +88,21 @@ function install-graphic-driver {
         # vGaming driver for g4/g5
         $Bucket = "nvidia-gaming"
         $KeyPrefix = "windows/latest"
+        $BucketRegion = "us-east-1"
 
         # download and extract driver
-        $Objects = Get-S3Object -BucketName $Bucket -KeyPrefix $KeyPrefix -Region ${region}
+        $Objects = Get-S3Object -BucketName $Bucket -KeyPrefix $KeyPrefix -Region $BucketRegion
         foreach ($Object in $Objects) {
             if ($Object.Size -ne 0) {
                 $LocalFileName = "C:\nvidia-driver\driver.zip"
-                Copy-S3Object -BucketName $Bucket -Key $Object.Key -LocalFile $LocalFileName -Region ${region}
+                Copy-S3Object -BucketName $Bucket -Key $Object.Key -LocalFile $LocalFileName -Region $BucketRegion
                 Expand-Archive $LocalFileName -DestinationPath $ExtractionPath
                 break
             }
         }
 
         # install licence
-        Copy-S3Object -BucketName $Bucket -Key "GridSwCert-Archive/GridSwCert-Windows_2024_10.cert" -LocalFile "C:\Users\Public\Documents\GridSwCert.txt" -Region ${region}
+        Copy-S3Object -BucketName $Bucket -Key "GridSwCert-Archive/GridSwCert-Windows_2024_10.cert" -LocalFile "C:\Users\Public\Documents\GridSwCert.txt" -Region $BucketRegion
         [microsoft.win32.registry]::SetValue("HKEY_LOCAL_MACHINE\SOFTWARE\NVIDIA Corporation\Global", "vGamingMarketplace", 0x02)
 
         %{ endif }
