@@ -34,11 +34,16 @@ jobs:
             -backend-config="dynamodb_table=${RESOURCE_NAME}-terraform-locks"
 
       - name: Generate tfvars
+        env:
+          TF_VAR_CUSTOM_AMI: ${{ vars.TF_VAR_CUSTOM_AMI }}
+          TF_VAR_SKIP_INSTALL: ${{ vars.TF_VAR_SKIP_INSTALL }}
         run: |
           cat > terraform.tfvars <<EOF
           region = "${TF_VAR_region}"
           resource_name = "${RESOURCE_NAME}"
           games_volume_size_gb = ${TF_VAR_games_volume_size_gb:-100}
+          custom_ami = "${TF_VAR_CUSTOM_AMI:-}"
+          skip_install = ${TF_VAR_SKIP_INSTALL:-false}
           EOF
 
       - name: Terraform Apply

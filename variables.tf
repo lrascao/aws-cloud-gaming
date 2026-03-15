@@ -48,7 +48,7 @@ variable "skip_install" {
 variable "install_parsec" {
   description = "Download and run Parsec-Cloud-Preparation-Tool on first login"
   type        = bool
-  default     = true
+  default     = false
 }
 
 variable "install_auto_login" {
