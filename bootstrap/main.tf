@@ -1,6 +1,7 @@
 variable "region" {
   description = "The aws region for the state bucket"
   type        = string
+  default     = "eu-west-1"
 }
 
 variable "resource_name" {
@@ -72,7 +73,7 @@ resource "aws_dynamodb_table" "terraform_locks" {
 variable "github_repo" {
   description = "GitHub repository in org/repo format for OIDC trust"
   type        = string
-  default     = "luis-rascao/aws-cloud-gaming"
+  default     = "lrascao/aws-cloud-gaming"
 }
 
 data "tls_certificate" "github" {
