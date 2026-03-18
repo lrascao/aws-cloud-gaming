@@ -37,6 +37,7 @@ jobs:
         env:
           TF_VAR_CUSTOM_AMI: ${{ vars.TF_VAR_CUSTOM_AMI }}
           TF_VAR_SKIP_INSTALL: ${{ vars.TF_VAR_SKIP_INSTALL }}
+          TF_VAR_INSTANCE_TYPE: ${{ vars.TF_VAR_INSTANCE_TYPE }}
         run: |
           cat > terraform.tfvars <<EOF
           region = "${TF_VAR_region}"
@@ -44,6 +45,7 @@ jobs:
           games_volume_size_gb = ${TF_VAR_games_volume_size_gb:-100}
           custom_ami = "${TF_VAR_CUSTOM_AMI:-}"
           skip_install = ${TF_VAR_SKIP_INSTALL:-false}
+          instance_type = "${TF_VAR_INSTANCE_TYPE:-g4dn.xlarge}"
           EOF
 
       - name: Terraform Apply
