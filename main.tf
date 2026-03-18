@@ -312,9 +312,10 @@ resource "aws_eip_association" "instance" {
 }
 
 resource "aws_volume_attachment" "games" {
-  device_name = "/dev/xvdf"
-  volume_id   = aws_ebs_volume.games.id
-  instance_id = local.instance_id
+  device_name  = "/dev/xvdf"
+  volume_id    = aws_ebs_volume.games.id
+  instance_id  = local.instance_id
+  force_detach = true
 }
 
 output "instance_id" {
